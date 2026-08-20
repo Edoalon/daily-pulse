@@ -15,6 +15,7 @@ yarn-error.log*
 # Build / Output
 dist/
 build/
+lib/
 .firebase/
 
 # IDE & OS
