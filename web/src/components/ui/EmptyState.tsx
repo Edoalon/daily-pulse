@@ -65,7 +65,7 @@ export function EmptyState({ date, onGenerate, generating, pipelineStatus }: Emp
             <span className="font-medium text-gray-700">
               {formatDisplayDate(date)}
             </span>
-            ) yet. Run the agent now to produce today's briefing.
+            ) yet. The briefing updates automatically every night at 00:01 AM (Israel Time).
           </>
         ) : (
           <>
@@ -73,28 +73,31 @@ export function EmptyState({ date, onGenerate, generating, pipelineStatus }: Emp
             <span className="font-medium text-gray-700">
               {formatDisplayDate(date)}
             </span>
-            . You can select another past date from the calendar or generate today's briefing.
+            . You can select another past date from the calendar.
           </>
         )}
       </p>
 
-      <button
-        onClick={onGenerate}
-        disabled={generating}
-        className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-80"
-      >
-        {generating && percent > 0 && (
-          <div 
-            className="absolute left-0 top-0 bottom-0 bg-indigo-400 opacity-30 transition-all duration-500 ease-in-out" 
-            style={{ width: `${percent}%` }}
-          />
-        )}
-        
-        <div className="relative z-10 flex items-center gap-2">
-          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {buttonLabel}
-        </div>
-      </button>
+      {/* Manual generation button - hidden from public view (set to true to restore) */}
+      {false as boolean && (
+        <button
+          onClick={onGenerate}
+          disabled={generating}
+          className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-80"
+        >
+          {generating && percent > 0 && (
+            <div 
+              className="absolute left-0 top-0 bottom-0 bg-indigo-400 opacity-30 transition-all duration-500 ease-in-out" 
+              style={{ width: `${percent}%` }}
+            />
+          )}
+          
+          <div className="relative z-10 flex items-center gap-2">
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {buttonLabel}
+          </div>
+        </button>
+      )}
     </div>
   );
 }

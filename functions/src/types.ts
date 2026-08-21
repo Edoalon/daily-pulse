@@ -58,20 +58,35 @@ export interface PipelineStatusData {
   updatedAt: string;
 }
 
+export const APP_TIMEZONE = 'Asia/Jerusalem';
+
 export function getTemporalContext(referenceDate: Date = new Date()): TemporalContext {
-  const isoDate = referenceDate.toISOString().split('T')[0];
-  const year = referenceDate.getUTCFullYear();
+  // Format YYYY-MM-DD in Israel timezone (en-CA standard produces YYYY-MM-DD)
+  const isoDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(referenceDate);
+
+  const yearParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: APP_TIMEZONE,
+    year: 'numeric',
+  }).format(referenceDate);
+  const year = parseInt(yearParts, 10);
+
   const monthYear = referenceDate.toLocaleDateString('en-US', {
     month: 'long',
     year: 'numeric',
-    timeZone: 'UTC',
+    timeZone: APP_TIMEZONE,
   });
+
   const formattedDate = referenceDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-    timeZone: 'UTC',
+    timeZone: APP_TIMEZONE,
   });
 
   return { isoDate, year, monthYear, formattedDate };

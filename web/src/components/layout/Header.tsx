@@ -90,36 +90,38 @@ export function Header({
             title="Select date (up to today)"
           />
 
-          {/* Generate Today's Digest button */}
-          <button
-            onClick={onGenerate}
-            disabled={generating}
-            title="Generate real-time AI intelligence digest for today"
-            className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {generating && percent > 0 && (
-              <div 
-                className="absolute left-0 top-0 bottom-0 bg-indigo-600 opacity-40 transition-all duration-500 ease-in-out" 
-                style={{ width: `${percent}%` }}
-              />
-            )}
-            
-            <div className="relative z-10 flex items-center gap-2">
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">{buttonLabel}</span>
-                  <span className="sm:hidden">{percent > 0 ? `${percent}%` : "Running…"}</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" />
-                  <span className="hidden sm:inline">{buttonLabel}</span>
-                  <span className="sm:hidden">Today's Digest</span>
-                </>
+          {/* Generate Today's Digest button - hidden from public view (set to true to restore) */}
+          {false as boolean && (
+            <button
+              onClick={onGenerate}
+              disabled={generating}
+              title="Generate real-time AI intelligence digest for today"
+              className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {generating && percent > 0 && (
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-indigo-600 opacity-40 transition-all duration-500 ease-in-out" 
+                  style={{ width: `${percent}%` }}
+                />
               )}
-            </div>
-          </button>
+              
+              <div className="relative z-10 flex items-center gap-2">
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">{buttonLabel}</span>
+                    <span className="sm:hidden">{percent > 0 ? `${percent}%` : "Running…"}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    <span className="hidden sm:inline">{buttonLabel}</span>
+                    <span className="sm:hidden">Today's Digest</span>
+                  </>
+                )}
+              </div>
+            </button>
+          )}
         </div>
       </div>
     </header>

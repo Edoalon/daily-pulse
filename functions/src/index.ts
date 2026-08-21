@@ -1,6 +1,6 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
-import { runOmniDigest } from "./agent";
+import { runOmniDigest, getTemporalContext } from "./agent";
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -8,6 +8,8 @@ if (!admin.apps.length) {
 
 const COLLECTION_NAME = "daily-pulse";
 
+// HTTP onCall function kept for reference (disabled to restrict user triggering)
+/*
 export const getAiNews = functions.https.onCall(
   {
     cors: true,
@@ -63,24 +65,57 @@ export const getAiNews = functions.https.onCall(
     }
   }
 );
+*/
 
+/**
+ * Scheduled Cron Job: Executes OmniDigest generation daily at 00:01 AM Israel Time (Asia/Jerusalem).
+ */
 export const getAiNewsCron = functions.scheduler.onSchedule(
   {
-    schedule: "0 9 * * *",
-    timeZone: "UTC",
+    schedule: "1 0 * * *",
+    timeZone: "Asia/Jerusalem",
     timeoutSeconds: 300,
     memory: "1GiB",
   },
   async (event) => {
-    try {
-      console.log("[getAiNewsCron] Running scheduled OmniDigest task...");
-      const data = await runOmniDigest();
+    const db = admin.firestore();
+    const temporal = getTemporalContext();
+    let runDate = temporal.isoDate;
 
-      const db = admin.firestore();
+    try {
+      console.log(`[getAiNewsCron] Running scheduled OmniDigest task for ${runDate} (Israel Time)...`);
+
+      const data = await runOmniDigest(undefined, async (statusUpdate) => {
+        if (runDate) {
+          try {
+            await db.collection("pipeline-status").doc(runDate).set(
+              statusUpdate,
+              { merge: true }
+            );
+          } catch (err) {
+            console.error("[getAiNewsCron] Failed to write status update:", err);
+          }
+        }
+      });
+
+      runDate = data.date;
       await db.collection(COLLECTION_NAME).doc(data.date).set(data);
       console.log(`[getAiNewsCron] Saved OmniDigest for date: ${data.date} (${data.items?.length || 0} items)`);
-    } catch (error) {
+
+      // Mark status as completed
+      await db.collection("pipeline-status").doc(data.date).set({
+        status: "completed",
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+    } catch (error: any) {
       console.error("[getAiNewsCron] Cron execution error:", error);
+
+      if (runDate) {
+        await db.collection("pipeline-status").doc(runDate).set({
+          status: "failed",
+          updatedAt: new Date().toISOString(),
+        }, { merge: true }).catch(console.error);
+      }
     }
   }
 );
