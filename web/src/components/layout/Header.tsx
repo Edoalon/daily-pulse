@@ -1,12 +1,43 @@
 import { Loader2, Sparkles } from "lucide-react";
 import { APP_NAME } from "../../constants/app";
 import { formatDisplayDate, getTodayISO } from "../../utils/date";
+import type { PipelineStatusData } from "../../hooks/usePipelineStatus";
 
 interface HeaderProps {
   selectedDate: string;
   onDateChange: (date: string) => void;
   onGenerate: () => void;
   generating: boolean;
+  pipelineStatus?: PipelineStatusData | null;
+}
+
+const STAGES = [
+  "multi_domain_search",
+  "verification_loop",
+  "grounded_synthesis",
+  "schema_normalization",
+  "media_enrichment",
+];
+
+function getProgressPercent(status?: PipelineStatusData | null) {
+  if (!status || status.status !== "in_progress") return 0;
+  const index = STAGES.indexOf(status.activeStage);
+  if (index === -1) return 0;
+  // +1 because if we are in stage 0 (1/5), we want to show 20%
+  return Math.round(((index + 1) / STAGES.length) * 100);
+}
+
+function getStageLabel(status?: PipelineStatusData | null) {
+  if (!status || status.status !== "in_progress") return "Generating Today's Digest…";
+  
+  switch (status.activeStage) {
+    case "multi_domain_search": return "Multi-Domain Search…";
+    case "verification_loop": return "Verification Loop…";
+    case "grounded_synthesis": return "Grounded Synthesis…";
+    case "schema_normalization": return "Schema Normalization…";
+    case "media_enrichment": return "Media Enrichment…";
+    default: return "Generating Today's Digest…";
+  }
 }
 
 /**
@@ -19,8 +50,11 @@ export function Header({
   onDateChange,
   onGenerate,
   generating,
+  pipelineStatus,
 }: HeaderProps) {
   const todayISO = getTodayISO();
+  const percent = getProgressPercent(pipelineStatus);
+  const buttonLabel = generating ? getStageLabel(pipelineStatus) : "Generate Today's Digest";
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur-md">
@@ -61,21 +95,30 @@ export function Header({
             onClick={onGenerate}
             disabled={generating}
             title="Generate real-time AI intelligence digest for today"
-            className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-70"
+            className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-black disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {generating ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">Generating Today's Digest…</span>
-                <span className="sm:hidden">Running…</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">Generate Today's Digest</span>
-                <span className="sm:hidden">Today's Digest</span>
-              </>
+            {generating && percent > 0 && (
+              <div 
+                className="absolute left-0 top-0 bottom-0 bg-indigo-600 opacity-40 transition-all duration-500 ease-in-out" 
+                style={{ width: `${percent}%` }}
+              />
             )}
+            
+            <div className="relative z-10 flex items-center gap-2">
+              {generating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="hidden sm:inline">{buttonLabel}</span>
+                  <span className="sm:hidden">{percent > 0 ? `${percent}%` : "Running…"}</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  <span className="hidden sm:inline">{buttonLabel}</span>
+                  <span className="sm:hidden">Today's Digest</span>
+                </>
+              )}
+            </div>
           </button>
         </div>
       </div>

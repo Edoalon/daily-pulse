@@ -8,6 +8,7 @@ import { EmptyState } from "./components/ui/EmptyState";
 import { ErrorState } from "./components/ui/ErrorState";
 import { useDigest } from "./hooks/useDigest";
 import { useGenerateDigest } from "./hooks/useGenerateDigest";
+import { usePipelineStatus } from "./hooks/usePipelineStatus";
 import { getTodayISO } from "./utils/date";
 import type { DigestItem } from "./types/digest";
 
@@ -24,6 +25,7 @@ export default function App() {
 
   const { digest, loading, error } = useDigest(selectedDate);
   const { generate, generating, error: generateError } = useGenerateDigest();
+  const { status: pipelineStatus } = usePipelineStatus(selectedDate);
 
   const handleDateChange = (date: string) => {
     const today = getTodayISO();
@@ -47,13 +49,26 @@ export default function App() {
     setSelectedDate((prev) => prev);
   };
 
+  // Only trust pipeline status if it was updated recently (within 5 minutes).
+  // Prevents stale "in_progress" docs from a crashed run from showing as active.
+  const isPipelineActive = (() => {
+    if (!pipelineStatus || pipelineStatus.status !== "in_progress") return false;
+    if (!pipelineStatus.updatedAt) return false;
+    const updatedAt = new Date(pipelineStatus.updatedAt).getTime();
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    return updatedAt > fiveMinutesAgo;
+  })();
+
+  const isGenerating = generating || isPipelineActive;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
         selectedDate={selectedDate}
         onDateChange={handleDateChange}
         onGenerate={handleGenerateToday}
-        generating={generating}
+        generating={isGenerating}
+        pipelineStatus={pipelineStatus}
       />
 
       <main className="mx-auto max-w-7xl px-6 py-10">
@@ -73,7 +88,8 @@ export default function App() {
           <EmptyState
             date={selectedDate}
             onGenerate={handleGenerateToday}
-            generating={generating}
+            generating={isGenerating}
+            pipelineStatus={pipelineStatus}
           />
         ) : (
           <div className="space-y-10">

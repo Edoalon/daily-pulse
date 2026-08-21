@@ -41,6 +41,23 @@ export interface ResearchCheckResult {
   suggestedQuery?: string;
 }
 
+export type PipelineStage = 
+  | 'multi_domain_search'
+  | 'verification_loop'
+  | 'grounded_synthesis'
+  | 'schema_normalization'
+  | 'media_enrichment'
+  | 'completed'
+  | 'failed';
+
+export interface PipelineStatusData {
+  runId: string;
+  activeStage: PipelineStage;
+  progressDetails: string;
+  status: 'in_progress' | 'completed' | 'failed';
+  updatedAt: string;
+}
+
 export function getTemporalContext(referenceDate: Date = new Date()): TemporalContext {
   const isoDate = referenceDate.toISOString().split('T')[0];
   const year = referenceDate.getUTCFullYear();

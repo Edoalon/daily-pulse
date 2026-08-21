@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { DigestResponse, ResearchDossier, getTemporalContext } from './types';
+import { DigestResponse, ResearchDossier, getTemporalContext, PipelineStage, PipelineStatusData } from './types';
 import {
   RESEARCH_TOPICS,
   responseSchema,
@@ -14,7 +14,10 @@ export * from './types';
 const MAX_CHECK_ROUNDS = 2;
 const MODEL_NAME = 'gemini-3.7-flash';
 
-export async function runOmniDigest(referenceDate?: Date): Promise<DigestResponse> {
+export async function runOmniDigest(
+  referenceDate?: Date,
+  onStatusUpdate?: (status: Partial<PipelineStatusData>) => Promise<void>
+): Promise<DigestResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY environment variable is missing.');
@@ -22,6 +25,17 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
 
   const ai = new GoogleGenAI({ apiKey });
   const temporal = getTemporalContext(referenceDate);
+
+  const updateStatus = async (stage: PipelineStage, details: string) => {
+    if (onStatusUpdate) {
+      await onStatusUpdate({
+        activeStage: stage,
+        progressDetails: details,
+        status: 'in_progress',
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  };
 
   const dossier: ResearchDossier = {
     queries: [],
@@ -70,6 +84,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // PIPELINE STAGE 1: Multi-Topic Grounded Fetch
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 1: Multi-Search Fetch (${temporal.isoDate})...`);
+  await updateStatus('multi_domain_search', 'Fetching data across multiple domains...');
 
   const fetchTopic = async (topic: (typeof RESEARCH_TOPICS)[number]) => {
     console.log(`[OmniDigest Fetch] Querying domain: ${topic.topic}...`);
@@ -100,6 +115,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // PIPELINE STAGE 2: Verification & Gap-Filling Check Loop
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 2: Audit & Verification Loop...`);
+  await updateStatus('verification_loop', 'Verifying sources and checking for information gaps...');
   let round = 0;
 
   while (round < MAX_CHECK_ROUNDS) {
@@ -144,6 +160,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // PIPELINE STAGE 3: Grounded Synthesis
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 3: Anchored Synthesis...`);
+  await updateStatus('grounded_synthesis', 'Synthesizing findings from collected sources...');
 
   const synthesisResponse = await ai.models.generateContent({
     model: MODEL_NAME,
@@ -159,6 +176,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // PIPELINE STAGE 4: Strict Output Validation & Normalization
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 4: Output Validation & Schema Enforcement...`);
+  await updateStatus('schema_normalization', 'Validating syntax and normalizing data...');
   const parsed = JSON.parse(synthesisResponse.text || '{}');
   const normalized = validateAndNormalizeDigest(parsed, temporal, dossier.sources);
 
@@ -166,6 +184,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // PIPELINE STAGE 5: Open Graph & Media Enrichment
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 5: Open Graph Media Enrichment...`);
+  await updateStatus('media_enrichment', 'Enriching items with article metadata and images...');
   const enrichedItems = await enrichItemsWithImages(normalized.items);
 
   return {

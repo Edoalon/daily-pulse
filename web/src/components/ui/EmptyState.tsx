@@ -1,18 +1,52 @@
-import { FileSearch, Sparkles } from "lucide-react";
+import { FileSearch, Sparkles, Loader2 } from "lucide-react";
 import { formatDisplayDate, isToday } from "../../utils/date";
+import type { PipelineStatusData } from "../../hooks/usePipelineStatus";
 
 interface EmptyStateProps {
   date: string;
   onGenerate: () => void;
   generating: boolean;
+  pipelineStatus?: PipelineStatusData | null;
+}
+
+const STAGES = [
+  "multi_domain_search",
+  "verification_loop",
+  "grounded_synthesis",
+  "schema_normalization",
+  "media_enrichment",
+];
+
+function getProgressPercent(status?: PipelineStatusData | null) {
+  if (!status || status.status !== "in_progress") return 0;
+  const index = STAGES.indexOf(status.activeStage);
+  if (index === -1) return 0;
+  return Math.round(((index + 1) / STAGES.length) * 100);
+}
+
+function getStageLabel(status?: PipelineStatusData | null, currentIsToday?: boolean) {
+  if (!status || status.status !== "in_progress") {
+    return currentIsToday ? "Generate Today's Digest" : "Go to Today & Generate";
+  }
+  
+  switch (status.activeStage) {
+    case "multi_domain_search": return "Multi-Domain Search…";
+    case "verification_loop": return "Verification Loop…";
+    case "grounded_synthesis": return "Grounded Synthesis…";
+    case "schema_normalization": return "Schema Normalization…";
+    case "media_enrichment": return "Media Enrichment…";
+    default: return "Generating…";
+  }
 }
 
 /**
  * Displayed when no digest exists for the selected date.
  * Clarifies whether no digest exists for today or if there's no historical archive for a past date.
  */
-export function EmptyState({ date, onGenerate, generating }: EmptyStateProps) {
+export function EmptyState({ date, onGenerate, generating, pipelineStatus }: EmptyStateProps) {
   const currentIsToday = isToday(date);
+  const percent = getProgressPercent(pipelineStatus);
+  const buttonLabel = generating ? getStageLabel(pipelineStatus, currentIsToday) : (currentIsToday ? "Generate Today's Digest" : "Go to Today & Generate");
 
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -47,16 +81,20 @@ export function EmptyState({ date, onGenerate, generating }: EmptyStateProps) {
       <button
         onClick={onGenerate}
         disabled={generating}
-        className="flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        className="relative overflow-hidden flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-80"
       >
-        <Sparkles className="h-4 w-4" />
-        {generating
-          ? "Generating Today's Digest…"
-          : currentIsToday
-          ? "Generate Today's Digest"
-          : "Go to Today & Generate"}
+        {generating && percent > 0 && (
+          <div 
+            className="absolute left-0 top-0 bottom-0 bg-indigo-400 opacity-30 transition-all duration-500 ease-in-out" 
+            style={{ width: `${percent}%` }}
+          />
+        )}
+        
+        <div className="relative z-10 flex items-center gap-2">
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {buttonLabel}
+        </div>
       </button>
     </div>
   );
 }
-

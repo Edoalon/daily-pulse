@@ -15,17 +15,50 @@ export const getAiNews = functions.https.onCall(
     memory: "1GiB",
   },
   async (request) => {
+    const db = admin.firestore();
+    let runDate = "";
+
     try {
       console.log("[getAiNews] Triggered onCall OmniDigest execution...");
-      const data = await runOmniDigest();
 
-      const db = admin.firestore();
+      const data = await runOmniDigest(undefined, async (statusUpdate) => {
+        if (!runDate && statusUpdate.updatedAt) {
+           // A rough hack since we don't have isoDate available initially in this scope.
+           runDate = statusUpdate.updatedAt.split("T")[0]; 
+        }
+        if (runDate) {
+          try {
+            await db.collection("pipeline-status").doc(runDate).set(
+              statusUpdate,
+              { merge: true }
+            );
+          } catch(err) {
+            console.error("[getAiNews] Failed to write status update:", err);
+          }
+        }
+      });
+
+      runDate = data.date;
       await db.collection(COLLECTION_NAME).doc(data.date).set(data);
       console.log(`[getAiNews] Saved OmniDigest for date: ${data.date} (${data.items?.length || 0} items)`);
+
+      // Mark status as completed
+      db.collection("pipeline-status").doc(data.date).set({
+        status: "completed",
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch(console.error);
 
       return { data };
     } catch (error: any) {
       console.error("[getAiNews] Error executing OmniDigest:", error);
+
+      if (runDate) {
+         db.collection("pipeline-status").doc(runDate).set({
+            status: "failed",
+            updatedAt: new Date().toISOString(),
+          }, { merge: true }).catch(console.error);
+      }
+
       throw new functions.https.HttpsError("internal", error.message || "Failed to execute OmniDigest agent");
     }
   }
