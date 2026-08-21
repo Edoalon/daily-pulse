@@ -106,6 +106,7 @@ export function validateAndNormalizeDigest(
       sourceType: typeof item.sourceType === 'string' && item.sourceType.trim() ? item.sourceType.trim() : 'Article',
       qualityScore,
       tags,
+      ...(typeof item.imageUrl === 'string' && isValidUrl(item.imageUrl) ? { imageUrl: item.imageUrl } : {}),
     });
   }
 

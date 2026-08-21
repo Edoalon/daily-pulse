@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Star } from "lucide-react";
-import { resolveIcon } from "../../constants/iconMap";
+import { getFaviconUrl } from "../../constants/iconMap";
+import { ArticleVisualHeader } from "./ArticleVisualHeader";
 import type { DigestItem } from "../../types/digest";
 
 interface ArticleCardProps {
@@ -9,53 +11,67 @@ interface ArticleCardProps {
 
 /**
  * Individual news card in the digest grid.
- * Displays an icon header, source badge, quality score, title, summary, and tags.
+ * Displays tailored brand artwork, Open Graph cover images,
+ * publisher favicon badge, quality score, title, summary, and tags.
  */
 export function ArticleCard({ item, onClick }: ArticleCardProps) {
-  const Icon = resolveIcon(item.tags, item.sourceType);
+  const [faviconError, setFaviconError] = useState(false);
+  const faviconUrl = getFaviconUrl(item.sourceUrl);
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full cursor-pointer flex-col overflow-hidden rounded-lg border border-gray-200 bg-white text-left transition-all duration-200 hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-100/50"
+      className="group flex w-full cursor-pointer flex-col overflow-hidden rounded-xl border border-gray-200 bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-xl hover:shadow-indigo-500/10"
     >
-      {/* Icon header */}
-      <div className="flex h-28 items-center justify-center bg-gray-50 transition-colors group-hover:bg-indigo-50/50">
-        <Icon className="h-10 w-10 text-gray-400 transition-colors group-hover:text-indigo-400" />
-      </div>
+      {/* Visual Header: Open Graph image, Tailored Brand Artwork, or Editorial Publisher Header */}
+      <ArticleVisualHeader item={item} heightClass="h-44" />
 
       {/* Content */}
       <div className="flex flex-1 flex-col p-5">
         {/* Source badge + quality score */}
-        <div className="mb-3 flex items-center justify-between">
-          <span className="inline-block max-w-[160px] truncate rounded-sm bg-gray-900 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
-            {item.sourceName}
-          </span>
-          <span className="flex items-center gap-1 text-sm font-semibold text-indigo-600">
-            <Star className="h-3.5 w-3.5 fill-indigo-600" />
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {faviconUrl && !faviconError ? (
+              <img
+                src={faviconUrl}
+                alt=""
+                onError={() => setFaviconError(true)}
+                className="h-4 w-4 shrink-0 rounded-sm"
+                loading="lazy"
+              />
+            ) : (
+              <span className="h-2 w-2 shrink-0 rounded-full bg-indigo-500" />
+            )}
+            <span className="truncate rounded bg-gray-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-gray-800">
+              {item.sourceName}
+            </span>
+          </div>
+
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700 ring-1 ring-inset ring-indigo-600/10">
+            <Star className="h-3.5 w-3.5 fill-indigo-600 text-indigo-600" />
             {item.qualityScore.toFixed(1)}
           </span>
         </div>
 
         {/* Title */}
-        <h3 className="mb-2 line-clamp-2 font-serif text-lg font-bold leading-snug text-gray-900">
+        <h3 className="mb-2 line-clamp-2 font-serif text-lg font-bold leading-snug text-gray-900 transition-colors duration-200 group-hover:text-indigo-950">
           {item.title}
         </h3>
 
         {/* Summary */}
-        <p className="mb-4 line-clamp-2 flex-1 text-sm leading-relaxed text-gray-500">
+        <p className="mb-4 line-clamp-2 flex-1 text-sm leading-relaxed text-gray-600">
           {item.summary}
         </p>
 
         {/* Tags */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5 pt-1">
           {item.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="text-xs font-medium text-gray-400"
+              className="rounded-md bg-gray-50 px-2 py-0.5 text-[11px] font-medium text-gray-500 ring-1 ring-inset ring-gray-200/60"
             >
-              {tag}
+              #{tag}
             </span>
           ))}
         </div>

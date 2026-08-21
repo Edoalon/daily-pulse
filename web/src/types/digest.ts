@@ -8,6 +8,7 @@ export interface DigestItem {
   sourceType: string;
   qualityScore: number;
   tags: string[];
+  imageUrl?: string;
 }
 
 export interface DigestResponse {

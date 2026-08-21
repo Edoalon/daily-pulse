@@ -7,6 +7,7 @@ import {
   buildSynthesisPrompt,
 } from './prompts';
 import { evaluateResearchSufficiency, isValidUrl, validateAndNormalizeDigest } from './validator';
+import { enrichItemsWithImages } from './metadata';
 
 export * from './types';
 
@@ -159,5 +160,16 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   // -------------------------------------------------------------
   console.log(`[OmniDigest Pipeline] Stage 4: Output Validation & Schema Enforcement...`);
   const parsed = JSON.parse(synthesisResponse.text || '{}');
-  return validateAndNormalizeDigest(parsed, temporal, dossier.sources);
+  const normalized = validateAndNormalizeDigest(parsed, temporal, dossier.sources);
+
+  // -------------------------------------------------------------
+  // PIPELINE STAGE 5: Open Graph & Media Enrichment
+  // -------------------------------------------------------------
+  console.log(`[OmniDigest Pipeline] Stage 5: Open Graph Media Enrichment...`);
+  const enrichedItems = await enrichItemsWithImages(normalized.items);
+
+  return {
+    ...normalized,
+    items: enrichedItems,
+  };
 }
