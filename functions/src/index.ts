@@ -1,31 +1,54 @@
 import * as functions from "firebase-functions/v2";
+import * as admin from "firebase-admin";
 import { runOmniDigest } from "./agent";
 
-export const getAiNews = functions.https.onCall(async (request) => {
-  try {
-    const data = await runOmniDigest();
-    return { data };
-  } catch (error: any) {
-    throw new functions.https.HttpsError("internal", error.message);
-  }
-});
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
 
-export const getAiNewsCron = functions.scheduler.onSchedule("0 9 * * *", async (event) => {
-  try {
-    const data = await runOmniDigest();
-    
-    // Save to Firestore
-    const admin = await import("firebase-admin");
-    if (!admin.apps.length) {
-      admin.initializeApp();
+const COLLECTION_NAME = "daily-pulse";
+
+export const getAiNews = functions.https.onCall(
+  {
+    cors: true,
+    timeoutSeconds: 300,
+    memory: "1GiB",
+  },
+  async (request) => {
+    try {
+      console.log("[getAiNews] Triggered onCall OmniDigest execution...");
+      const data = await runOmniDigest();
+
+      const db = admin.firestore();
+      await db.collection(COLLECTION_NAME).doc(data.date).set(data);
+      console.log(`[getAiNews] Saved OmniDigest for date: ${data.date} (${data.items?.length || 0} items)`);
+
+      return { data };
+    } catch (error: any) {
+      console.error("[getAiNews] Error executing OmniDigest:", error);
+      throw new functions.https.HttpsError("internal", error.message || "Failed to execute OmniDigest agent");
     }
-    const db = admin.firestore();
-    
-    const dateStr = new Date().toISOString().split('T')[0];
-    await db.collection("daily-pulse").doc(dateStr).set(data);
-    
-    console.log(`Saved OmniDigest for ${dateStr}`);
-  } catch (error) {
-    console.error("Cron Error:", error);
   }
-});
+);
+
+export const getAiNewsCron = functions.scheduler.onSchedule(
+  {
+    schedule: "0 9 * * *",
+    timeZone: "UTC",
+    timeoutSeconds: 300,
+    memory: "1GiB",
+  },
+  async (event) => {
+    try {
+      console.log("[getAiNewsCron] Running scheduled OmniDigest task...");
+      const data = await runOmniDigest();
+
+      const db = admin.firestore();
+      await db.collection(COLLECTION_NAME).doc(data.date).set(data);
+      console.log(`[getAiNewsCron] Saved OmniDigest for date: ${data.date} (${data.items?.length || 0} items)`);
+    } catch (error) {
+      console.error("[getAiNewsCron] Cron execution error:", error);
+    }
+  }
+);
+

@@ -11,6 +11,7 @@ import { evaluateResearchSufficiency, isValidUrl, validateAndNormalizeDigest } f
 export * from './types';
 
 const MAX_CHECK_ROUNDS = 2;
+const MODEL_NAME = 'gemini-3.7-flash';
 
 export async function runOmniDigest(referenceDate?: Date): Promise<DigestResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -73,7 +74,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
     console.log(`[OmniDigest Fetch] Querying domain: ${topic.topic}...`);
     try {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: MODEL_NAME,
         contents: topic.buildPrompt(temporal),
         config: {
           systemInstruction: buildSystemPrompt(temporal),
@@ -115,7 +116,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
       console.log(`[OmniDigest Check] Executing gap-filling search: "${check.suggestedQuery.substring(0, 80)}..."`);
       try {
         const gapResponse = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
+          model: MODEL_NAME,
           contents: check.suggestedQuery,
           config: {
             systemInstruction: buildSystemPrompt(temporal),
@@ -144,7 +145,7 @@ export async function runOmniDigest(referenceDate?: Date): Promise<DigestRespons
   console.log(`[OmniDigest Pipeline] Stage 3: Anchored Synthesis...`);
 
   const synthesisResponse = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: MODEL_NAME,
     contents: buildSynthesisPrompt(temporal, dossier),
     config: {
       systemInstruction: `You are a strict data extraction and synthesis assistant. Output only factual JSON strictly anchored to the provided research dossier. Never extrapolate or invent items.`,
